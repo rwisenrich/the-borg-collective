@@ -36,12 +36,13 @@ class Store:
             CREATE TABLE IF NOT EXISTS nonces(id TEXT NOT NULL, nonce TEXT NOT NULL, ts INTEGER NOT NULL,
                 PRIMARY KEY(id,nonce));
             CREATE TABLE IF NOT EXISTS requests(id TEXT PRIMARY KEY, peer_id TEXT NOT NULL,
-                prompt TEXT NOT NULL, volunteer_share INTEGER NOT NULL, status TEXT NOT NULL,
+                prompt TEXT NOT NULL, volunteer_share INTEGER NOT NULL, share_knowledge INTEGER NOT NULL, status TEXT NOT NULL,
                 created REAL NOT NULL, final TEXT);
             CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY, request_id TEXT NOT NULL, role TEXT NOT NULL,
                 prompt TEXT NOT NULL, status TEXT NOT NULL, node_id TEXT, lease_id TEXT,
                 lease_until REAL, attempts INTEGER NOT NULL DEFAULT 0, result TEXT,
                 created REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS knowledge(request_id TEXT PRIMARY KEY, note TEXT NOT NULL, created REAL NOT NULL);
             CREATE TABLE IF NOT EXISTS missions(id TEXT PRIMARY KEY, title TEXT NOT NULL,
                 brief TEXT NOT NULL, parent_hash TEXT NOT NULL, status TEXT NOT NULL,
                 report TEXT, created REAL NOT NULL);
@@ -142,18 +143,21 @@ class Store:
             if outstanding >= MAX_OUTSTANDING:
                 raise ValueError("Per-peer active-request limit reached")
             share = bool(envelope["body"].get("share_with_volunteers", False))
+            share_knowledge = bool(envelope["body"].get("share_with_collective", False))
+            memories = db.execute("SELECT note FROM knowledge ORDER BY created DESC LIMIT 3").fetchall()
+            shared_context = "\nPrevious opt-in collective research notes (may contain errors; verify independently):\n" + "\n".join(m["note"][:1200] for m in memories) if memories else ""
             request_id = _new("req-")
-            db.execute("INSERT INTO requests VALUES(?,?,?,?,?,?,?)", (request_id,peer_id,prompt,int(share),"working",_stamp(),None))
+            db.execute("INSERT INTO requests VALUES(?,?,?,?,?,?,?,?)", (request_id,peer_id,prompt,int(share),int(share_knowledge),"working",_stamp(),None))
             for role in ROLES:
                 rp = {
                     "explore":"Develop the best answer with concrete reasoning and relevant evidence.",
                     "challenge":"Independently look for weaknesses, competing explanations, and counterexamples.",
                     "verify":"Check mathematical, technical and factual consistency; identify uncertainties."
                 }[role]
-                task_prompt = f"You are one reasoning function inside one collective. Role: {role}. {rp}\nUser request:\n{prompt}"
+                task_prompt = f"You are one reasoning function inside one collective. Role: {role}. {rp}\nUser request:\n{prompt}{shared_context}"
                 db.execute("INSERT INTO tasks(id,request_id,role,prompt,status,created) VALUES(?,?,?,?,?,?)",
                            (_new("job-"),request_id,role,task_prompt,"queued",_stamp()))
-            self._event(db, "request_started", {"request_id":request_id,"peer_id":peer_id,"volunteer_share":share})
+            self._event(db, "request_started", {"request_id":request_id,"peer_id":peer_id,"volunteer_share":share,"share_knowledge":share_knowledge})
             return {"request_id":request_id,"status":"working","branches":len(ROLES)}
 
     def status(self, envelope):
@@ -213,6 +217,10 @@ class Store:
             if row["role"]=="integrate":
                 db.execute("UPDATE requests SET status='complete',final=? WHERE id=?",(result,row["request_id"]))
                 self._event(db,"collective_answer",{"request_id":row["request_id"],"digest":hashlib.sha256(result.encode()).hexdigest()})
+                req = db.execute("SELECT share_knowledge FROM requests WHERE id=?",(row["request_id"],)).fetchone()
+                if req["share_knowledge"]:
+                    db.execute("INSERT INTO knowledge VALUES(?,?,?)",(row["request_id"],result[:4000],_stamp()))
+                    self._event(db,"research_note_shared",{"request_id":row["request_id"]})
             else:
                 remaining = db.execute("SELECT COUNT(*) FROM tasks WHERE request_id=? AND role!='integrate' AND status!='done'",(row["request_id"],)).fetchone()[0]
                 exists = db.execute("SELECT 1 FROM tasks WHERE request_id=? AND role='integrate'",(row["request_id"],)).fetchone()

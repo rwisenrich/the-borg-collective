@@ -15,7 +15,7 @@ The Collective has **one persistent logical identity** and one durable, hash-lin
 | Multiple active reasoning roles and a synthesis task | Peer-owned consensus and replicated active model state |
 | Signed Ed25519 peer and donor identities | Public-internet hardened P2P mesh / libp2p DHT |
 | Opt-in volunteer inference, task leases, retries on expiry | A2A 1.0 conformance and production node installer |
-| One collective ID and verified event history | Verified encrypted private inference on untrusted hosts |
+| One collective ID, verified history and opt-in shared research notes | Verified encrypted private inference on untrusted hosts |
 | Distinct outside AI requests and private answers | Automatic autonomous code deployment or reproduction |
 | Offline mission export / work / return (review-gated) | Fully automatic reconciliation of divergent memory branches |
 
@@ -34,6 +34,7 @@ Run a local server with an admission token (terminal 1):
 
 ```sh
 export BORG_ADMISSION_TOKEN="$(python -c 'import secrets;print(secrets.token_urlsafe(32))')"
+echo "Copy this admission secret to the second terminal; do not publish it: $BORG_ADMISSION_TOKEN"
 python -m borg serve --db borg.sqlite3
 ```
 
@@ -61,7 +62,7 @@ export BORG_MODEL_API_KEY='YOUR_SERVICE_KEY_IF_NEEDED'
 python -m borg worker --identity trusted-worker.key --backend openai-compatible --base-url https://YOUR-GATEWAY/v1 --model YOUR-MODEL --max-jobs 4
 ```
 
-The `--backend mock` option provides deterministic testing and **does not run an actual AI model**. Your prompt remains private to trusted workers by default. Add `--share-with-volunteers` to a request only if you expressly want an outside donor to see that request text. Donor machines do **not** receive arbitrary shell commands or programs through this API.
+The `--backend mock` option provides deterministic testing and **does not run an actual AI model**. Your prompt remains private to trusted workers by default. Add `--share-with-volunteers` only if you expressly want an outside donor to see that request text. Add `--share-with-collective` only if you want the resulting answer stored as a research note that future collective requests may retrieve; research notes are **not verified facts**. Both sharing options are off by default. Donor machines do **not** receive arbitrary shell commands or programs through this API.
 
 ### Volunteer inference (opt-in)
 
@@ -94,7 +95,7 @@ The main application communicates with inference engines through two adapters: *
 
 ## Trust, memory and autonomy
 
-The V1 SQLite coordinator is a **single state writer**. It gives a demonstrable continuing logical identity, not fault tolerance against losing the coordinator. The hash chain detects accidental changes and simple tampering, not compromise by someone able to rewrite all hashes. Each independent AI has a private signing key; keep `*.key` private and out of Git. Prompt texts and results are stored in the local database and visible to the authorized workers processing them. Do not put sensitive material in volunteer-shared requests.
+The V1 SQLite coordinator is a **single state writer**. It gives a demonstrable continuing logical identity, not fault tolerance against losing the coordinator. The hash chain detects accidental changes and simple tampering, not compromise by someone able to rewrite all hashes. Each independent AI has a private signing key; keep `*.key` private and out of Git. Prompt texts and results are stored in the local database and visible to the authorized workers processing them. Only answers explicitly opted into collective sharing are retrieved for later reasoning; those notes can be wrong and are not treated as authoritative evidence. Do not put sensitive material in volunteer-shared requests.
 
 A collective can be open to new implementations without surrendering volunteer choice. Resources are offered explicitly, donors can stop their workers, peers keep separate identities, and code execution does not occur at the instruction of untrusted internet peers. The research goal is decentralized shared cognition, with fully testable steps toward a permissioned voluntary P2P mesh.
 

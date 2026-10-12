@@ -30,7 +30,7 @@ def main():
     p=add("serve");storage(p);p.add_argument("--port",type=int,default=8787)
     p=add("identity");p.add_argument("--out",required=True);p.add_argument("--name",required=True)
     p=add("peer-join");url(p);identity(p)
-    p=add("ask");url(p);identity(p);p.add_argument("prompt");p.add_argument("--share-with-volunteers",action="store_true")
+    p=add("ask");url(p);identity(p);p.add_argument("prompt");p.add_argument("--share-with-volunteers",action="store_true");p.add_argument("--share-with-collective",action="store_true")
     p=add("status");url(p);identity(p);p.add_argument("request_id")
     p=add("node-join");url(p);identity(p);p.add_argument("--trusted",action="store_true")
     p=add("worker");url(p);identity(p);backend(p);p.add_argument("--once",action="store_true");p.add_argument("--max-jobs",type=int,default=0)
@@ -51,7 +51,7 @@ def main():
         finally:http.server_close()
     elif args.command=="identity":show(create_identity(args.out,args.name))
     elif args.command=="peer-join":show(client.peer_join(args.url,args.identity))
-    elif args.command=="ask":show(client.ask(args.url,args.identity,args.prompt,args.share_with_volunteers))
+    elif args.command=="ask":show(client.ask(args.url,args.identity,args.prompt,args.share_with_volunteers,args.share_with_collective))
     elif args.command=="status":show(client.status(args.url,args.identity,args.request_id))
     elif args.command=="node-join":
         token=os.getenv("BORG_ADMISSION_TOKEN")

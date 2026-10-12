@@ -30,9 +30,9 @@ def peer_join(url, path):
     return post(url,"/v1/peers/register",signed(identity,"peer.register",{"name":identity["name"]}))
 
 
-def ask(url,path,prompt,share_with_volunteers=False):
+def ask(url,path,prompt,share_with_volunteers=False,share_with_collective=False):
     identity=load_identity(path)
-    return post(url,"/v1/peers/ask",signed(identity,"peer.ask",{"prompt":prompt,"share_with_volunteers":share_with_volunteers}))
+    return post(url,"/v1/peers/ask",signed(identity,"peer.ask",{"prompt":prompt,"share_with_volunteers":share_with_volunteers,"share_with_collective":share_with_collective}))
 
 
 def status(url,path,request_id):

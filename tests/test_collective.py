@@ -116,3 +116,20 @@ class CollectiveTests(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+# Additional privacy and shared-memory integration check (independent of global state).
+class KnowledgeTests(unittest.TestCase):
+    setUp = CollectiveTests.setUp
+    sign = CollectiveTests.sign
+    enroll = CollectiveTests.enroll
+
+    def test_collective_memory_opt_in(self):
+        self.enroll()
+        request=self.s.ask(self.sign(self.ai,'peer.ask',{'prompt':'Pythagoras','share_with_collective':True}))
+        for _ in range(4):
+            job=self.s.claim(self.sign(self.local,'node.claim',{}))['job']
+            self.s.complete(self.sign(self.local,'node.complete',{'job_id':job['id'],'lease':job['lease'],'result':'Established a^2+b^2=c^2'}))
+        following=self.s.ask(self.sign(self.ai2,'peer.ask',{'prompt':'Geometry review'}))
+        job=self.s.claim(self.sign(self.local,'node.claim',{}))['job']
+        self.assertIn('Established a^2+b^2=c^2',job['prompt'])
+        self.assertTrue(self.s.history())
