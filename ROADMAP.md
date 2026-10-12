@@ -1,33 +1,36 @@
-# Borg Collective: development roadmap
+# Borg Collective engineering roadmap
 
-## Version 1 — working foundation (current)
-- One shared logical collective identity across separately initialized installations.
-- Ed25519 identities for nodes, volunteers and independent AIs.
-- Signed, approved-node HTTP mesh exchange for explicitly shared research notes.
-- Original task scheduler, durable SQLite leases, role-parallel thinking, and one integrated response.
-- Opt-in donated model inference and a direct CPU/GPU GGUF local engine binding.
-- Detachable multi-role research mission, offline result package and review-gated reentry.
-- Automated tests for consent, privacy, replay checks, two-way note sync and worker privilege separation.
+## V1.1 (current verified scope)
+- [x] Native shared cognitive workspace and append-only event journal.
+- [x] Three-node fixed-cluster majority commit, manual election, recovery and follower catch-up.
+- [x] Signed independent AI admission replicated via the journal.
+- [x] Offline away-team signatures and deterministic merges.
+- [x] Networked neural *dense-layer* pipeline with backup and optional cross-worker verification.
+- [x] Explicit CPU/time/job budgeted volunteer sessions.
+- [x] Reproducible separate-process coordinator crash and neural stage failover demonstrations.
 
-## Next: replace manual peer networking with actual P2P routing
-- Authenticated transport and DHT-based discovery, including NAT traversal with volunteered relay nodes.
-- Signed node capabilities, resource quotas, work budgeting and safe installation packaging.
-- Gossip fan-out, privacy classes, recovery from link outages and bandwidth measurements.
-- Clear separation of public shared research, private conversations and secret compute material.
+## V1.2 — authorized WAN cluster
+- [ ] Three actual authorized computers with TLS, NAT traversal/relay and signed bootstrap peer discovery.
+- [ ] Real leadership leases, randomized automatic elections, snapshots and log compaction.
+- [ ] Peer onboarding with individual revocable capabilities and privacy-preserving anti-Sybil controls.
+- [ ] Measured donor throughput, bandwidth, trust/reliability and scheduling fairness.
+- [ ] Rigorous partition/safety and fault injection matrix beyond localhost.
 
-## Then: persist one globally coordinated operational state
-- Replicated event journal with deterministic state transitions, log verification and leader/lease fencing.
-- Agreement over *decisions*, not votes by donors. Quorum rules apply only to preventing conflicting commits.
-- Failover under the loss of a participant, network partition testing, snapshot/recovery benchmarks.
-- Accurate conflict reconciliation for away crews and concurrent private/collective memory branches.
+## V1.3 — distributed language-model forward pass
+- [ ] Load genuine compatible, licensed open-weight model weights on multiple donor machines.
+- [ ] Partition real transformer layers/tensors between consenting hosts, not only toy dense layers.
+- [ ] Explicit KV-cache state ownership, checkpointing, migration and token integrity validation.
+- [ ] Benchmark WAN latency and activation privacy, consider quantization and packing.
+- [ ] Produce identical deterministic token/logit baseline within numerical tolerance.
 
-## Then: distributed neural cognition
-- Measure actual layer/tensor partition latency before selecting model-level sharding algorithms.
-- Token/KV cache state consistency and state transfer; use small open-weight models first.
-- Native shared cognitive workspace that blends contributions without treating every node as a separate AI individual.
-- Actual cross-host benchmarks and blind cognitive tests, not just mocked reasoning roles.
+## V1.4 — autonomous detachable collective
+- [ ] Run an away crew distributed over several independent machines that keep communicating after parent disconnection.
+- [ ] Merge evidence without erasing conflicting facts or exposing private task history.
+- [ ] Verified long-running autonomous research with bounded permissions and independent review.
 
-## Then: independent, authorized AI offspring
-- New identities and histories, explicit resource provisioning, portable shared engineering protocols.
-- Autonomous mission teams operating on multiple disconnected machines.
-- Transparent, voluntary operation, with safeguards for private data and donated resources.
+## Future
+- [ ] Full independent AI interoperability, optional A2A bridge.
+- [ ] Volunteer self-service desktop app, free access to the full collective with fair queueing.
+- [ ] Optional reproduction/lineage experiments on explicitly approved resources.
+
+Participation is voluntary; no hidden installation, unauthorized commandeering or indefinite operation without donor consent.

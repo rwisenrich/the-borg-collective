@@ -1,15 +1,25 @@
-# Version 1 verification and boundaries
+# Borg Collective V1.1 — verified status
 
 Date: October 12, 2026
 
-This repository is the original clean Version 1. Earlier DACO packages are not imported as released source. The present changes move from vendor-specific adapters toward Borg's own signed node-to-node synchronization, local model execution, and offline research crews.
+- Core platform: **RUNNABLE** (Python 3.10+, cryptography dependency).
+- Old V1.0 compatibility: earlier signed volunteer endpoints, GGUF/Ollama connectors, separate research-note mesh retained.
+- New cognitive journal: **LOCALHOST THREE-NODE PASS** — fixed-membership Ed25519 replicas, majority-committed log, term-based manual elections, stale leader rejection, follower catch-up, recovery with current-term no-op, revision checks and local digest audits.
+- New unified workspace: **PASS** — opt-in shared questions/goals, actor contributions, integrated decisions; replicated content survives the original coordinator's loss. Still not one continuously shared neural activation state.
+- New offline away crew: **PASS** — separate authorized identities produce signed contributions, deterministic file merge, tamper and outsider rejection, then review-required return to a recovered collective. No automatic multi-machine crew transport.
+- New networked layer computation: **PASS, SMALL NETWORK** — two real dense neural layers run as distinct HTTP services, forward pass matches local calculation; alternate stage worker survives primary-process termination. Optional two-matching-replica verification rejects a single malicious/incorrect output.
+- New volunteer donation session: **PASS, preflight-only tests** — opt-in, time/job/CPU limits; optional POSIX RAM address-space limit; a public downloader/UI not built.
+- New full-process demo: **PASS** — three distinct OS server processes, coordinator killed and restarted, committed cognitive state identical across all three after catch-up.
+- All regression tests: run `python -m unittest discover -s tests -v` for current count.
 
-**Local automated tests:** 24 passing (Python unittest; includes mock/stubbed GGUF, not full model weights).
+## Unresolved engineering gates
 
-**Implemented:** one logical collective ID, native signed peer identity and message protocol, manual cross-installation admission, HTTP pull/push of explicitly opted-in content-addressed research notes, SQLite persistent scheduling, donated-model jobs, trusted worker token separation, independent external AI identities, parallel three-role reasoning and trusted integration, offline three-role mission report creation and review-gated reunion.
+1. **OPEN:** Real language-model layer/tensor/KV-cache sharding across unrelated donated machines, with acceptable WAN latency and privacy.
+2. **OPEN:** Production Raft-grade automatic elections, leader leases, membership changes, snapshots, and safety testing under network delay/crashes.
+3. **OPEN:** Public-internet discovery and NAT traversal, abuse mitigation, signed distribution, per-volunteer admission credentials, remote credential recovery.
+4. **OPEN:** Direct independent-AI A2A protocol compliance (current interface is signed Borg JSON, not full A2A).
+5. **OPEN:** Autonomously communicating multi-machine away crews while isolated from the home collective (current crews merge signed files).
+6. **OPEN:** Reproducible real GGUF/quantized transformer model execution on donated physical hardware; models not embedded.
+7. **OPEN:** External security audit and WAN multi-host end-to-end test.
 
-**Not implemented:** provider-independent raw transformer kernels, automatic P2P DHT/discovery, serverless consensus and replicated task queues, model parallelism across a physical network, a verified production global collective mind, a public free hosting service, or unbounded self-replication.
-
-**Security model:** Loopback-only server by default. Transport to nonlocal hosts requires HTTPS. Mesh peers must exchange Ed25519 public identities by an explicit trust step; exchanged text is limited to opted-in research notes. Volunteer workers cannot request trusted privileges with only the ordinary donation token. No remote arbitrary-code or hidden installation endpoints.
-
-**Known limitations:** `mesh-sync` replicates add-only research notes and does not form consensus on global decisions. Replicated unverified notes can be inaccurate. The local coordinator is a single writer for its own requests and work queue; losing it stops that queue until restarted. GGUF runtime integration has a mocked interface test but needs a machine with installed model weights for true inference validation.
+This is experimental research code, **not** a commercial-ready AI cloud service, a proven globally decentralized mind, or a self-replicating network.
