@@ -33,3 +33,25 @@ class ModelAdapterTests(unittest.TestCase):
                 self.assertEqual(infer('question',backend='ollama',model='qwen3:1.7b'),'ollama answer')
 
 if __name__=='__main__': unittest.main()
+
+class DirectLocalModelTests(unittest.TestCase):
+    def test_gguf_requires_explicit_file(self):
+        with self.assertRaises(ValueError):
+            infer('question',backend='gguf',model='does-not-exist.gguf')
+
+    def test_local_gguf_inference_protocol(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            model_path=Path(tmp)/'small.gguf'
+            model_path.write_bytes(b'Test placeholder - not real weights')
+            fake_result={'choices':[{'message':{'content':'direct local result'}}]}
+            class FakeLlama:
+                def create_chat_completion(self,**kwargs):
+                    self.prompt=kwargs['messages'][0]['content']
+                    return fake_result
+            fake=FakeLlama()
+            with patch('borg.models._local_gguf',return_value=fake):
+                self.assertEqual(infer('One question',backend='gguf',model=str(model_path)),
+                                 'direct local result')
+                self.assertEqual(fake.prompt,'One question')

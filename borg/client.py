@@ -8,13 +8,15 @@ from .crypto import load_identity, signed
 from .models import infer
 
 
-def post(base_url, path, envelope, token=None, timeout=30):
+def post(base_url, path, envelope, token=None, trusted_token=None, timeout=30):
     u=urlparse(base_url)
     if u.scheme != "https" and not (u.scheme=="http" and u.hostname in ("127.0.0.1","localhost","::1")):
         raise ValueError("Remote connections require HTTPS; insecure HTTP is loopback-only")
     headers={"Content-Type":"application/json"}
     if token:
         headers["X-Admission-Token"]=token
+    if trusted_token:
+        headers["X-Trusted-Token"]=trusted_token
     req=Request(base_url.rstrip("/")+path,json.dumps(envelope).encode(),headers)
     try:
         with urlopen(req,timeout=timeout) as response:
@@ -40,10 +42,10 @@ def status(url,path,request_id):
     return post(url,"/v1/peers/status",signed(identity,"peer.status",{"request_id":request_id}))
 
 
-def node_join(url,path,admission_token,trusted=False):
+def node_join(url,path,admission_token,trusted=False,trusted_token=None):
     identity=load_identity(path)
     body={"name":identity["name"],"trusted":trusted}
-    return post(url,"/v1/nodes/register",signed(identity,"node.register",body),token=admission_token)
+    return post(url,"/v1/nodes/register",signed(identity,"node.register",body),token=admission_token,trusted_token=trusted_token)
 
 
 def work_once(url,path,backend="mock",model=None,base_url=None):

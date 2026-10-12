@@ -1,27 +1,33 @@
-# Collective roadmap
+# Borg Collective: development roadmap
 
-## V1.0 (this repository) — implemented and locally testable
-- Original clean Python implementation, signed independent peer identities, voluntary node admission, common event history, private-by-default requests.
-- Concurrent *capable* reasoning branches: explore, challenge, verify; model workers may operate on different machines. Trusted integration generates the single response.
-- Ollama and OpenAI-compatible adapters; Dynamo/vLLM are external inference services, not bundled engines.
-- Detached offline mission reports imported only as review-gated evidence.
+## Version 1 — working foundation (current)
+- One shared logical collective identity across separately initialized installations.
+- Ed25519 identities for nodes, volunteers and independent AIs.
+- Signed, approved-node HTTP mesh exchange for explicitly shared research notes.
+- Original task scheduler, durable SQLite leases, role-parallel thinking, and one integrated response.
+- Opt-in donated model inference and a direct CPU/GPU GGUF local engine binding.
+- Detachable multi-role research mission, offline result package and review-gated reentry.
+- Automated tests for consent, privacy, replay checks, two-way note sync and worker privilege separation.
 
-## Next: V1.1 — safe external pilot
-- HTTPS gateway with explicit coordinator/domain configuration, quotas and stronger abuse defenses.
-- Per-node resource limits, capability attestation, signed worker updates, human-friendly donor client.
-- End-to-end multi-computer tests with actual independent model hosts; private result routing, manual revocation.
-- Standard A2A interoperability adapter and specification tests.
+## Next: replace manual peer networking with actual P2P routing
+- Authenticated transport and DHT-based discovery, including NAT traversal with volunteered relay nodes.
+- Signed node capabilities, resource quotas, work budgeting and safe installation packaging.
+- Gossip fan-out, privacy classes, recovery from link outages and bandwidth measurements.
+- Clear separation of public shared research, private conversations and secret compute material.
 
-## Later: V2 — decentralized collective continuity
-- libp2p peer discovery and authenticated encrypted transports.
-- Replicated collective event history, consensus / leader election, quorum-based state commits, snapshot verification.
-- Network partition and recovery tests: no conflicting authoritative states, offline mission merge and review.
-- Robust confidentiality boundaries for donated hardware and peer-access protocols.
+## Then: persist one globally coordinated operational state
+- Replicated event journal with deterministic state transitions, log verification and leader/lease fencing.
+- Agreement over *decisions*, not votes by donors. Quorum rules apply only to preventing conflicting commits.
+- Failover under the loss of a participant, network partition testing, snapshot/recovery benchmarks.
+- Accurate conflict reconciliation for away crews and concurrent private/collective memory branches.
 
-## Later: V3 — deep distributed cognition
-- Integrate Petals-like model partitioning or NVIDIA-based multi-node inference with benchmarked communication costs.
-- Incremental common workspace, memory retrieval, model/context consistency and verified synthesis.
-- Multi-node away collectives that operate offline and later reconcile cryptographically signed findings.
-- Separate-identity child systems only through explicit authorized provisioning and operator-controlled resources.
+## Then: distributed neural cognition
+- Measure actual layer/tensor partition latency before selecting model-level sharding algorithms.
+- Token/KV cache state consistency and state transfer; use small open-weight models first.
+- Native shared cognitive workspace that blends contributions without treating every node as a separate AI individual.
+- Actual cross-host benchmarks and blind cognitive tests, not just mocked reasoning roles.
 
-**No step assumes commandeering devices, evading platform terms, or making permanent copies on machines without consent.**
+## Then: independent, authorized AI offspring
+- New identities and histories, explicit resource provisioning, portable shared engineering protocols.
+- Autonomous mission teams operating on multiple disconnected machines.
+- Transparent, voluntary operation, with safeguards for private data and donated resources.

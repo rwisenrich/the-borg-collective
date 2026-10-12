@@ -7,7 +7,8 @@ import time
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from .crypto import canonical, verify
+from .crypto import canonical, verify, signed
+from .mesh import digest, check_public, PAGE, MAX_NOTE
 
 ROLES = ("explore", "challenge", "verify")
 MAX_OUTSTANDING = 2
@@ -22,7 +23,7 @@ def _new(prefix):
 
 
 class Store:
-    def __init__(self, path):
+    def __init__(self, path, collective_id=None):
         self.path = str(path)
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with self.db() as db:
@@ -43,13 +44,19 @@ class Store:
                 lease_until REAL, attempts INTEGER NOT NULL DEFAULT 0, result TEXT,
                 created REAL NOT NULL);
             CREATE TABLE IF NOT EXISTS knowledge(request_id TEXT PRIMARY KEY, note TEXT NOT NULL, created REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS mesh_notes(digest TEXT PRIMARY KEY, note TEXT NOT NULL,
+                created REAL NOT NULL, origin TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS mesh_peers(id TEXT PRIMARY KEY, public TEXT NOT NULL, name TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS missions(id TEXT PRIMARY KEY, title TEXT NOT NULL,
                 brief TEXT NOT NULL, parent_hash TEXT NOT NULL, status TEXT NOT NULL,
                 report TEXT, created REAL NOT NULL);
             CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT, at REAL NOT NULL,
                 kind TEXT NOT NULL, details TEXT NOT NULL, prev TEXT NOT NULL, hash TEXT NOT NULL);
             """)
-            db.execute("INSERT OR IGNORE INTO meta VALUES('collective_id', ?)", (_new("borg-"),))
+            db.execute("INSERT OR IGNORE INTO meta VALUES('collective_id', ?)", (collective_id or _new("borg-"),))
+            actual = db.execute("SELECT value FROM meta WHERE key='collective_id'").fetchone()[0]
+            if collective_id and actual != collective_id:
+                raise ValueError("Database belongs to a different collective")
             if not db.execute("SELECT 1 FROM events LIMIT 1").fetchone():
                 self._event(db, "genesis", {"collective": db.execute("SELECT value FROM meta WHERE key='collective_id'").fetchone()[0], "schema": 1})
 
@@ -144,7 +151,10 @@ class Store:
                 raise ValueError("Per-peer active-request limit reached")
             share = bool(envelope["body"].get("share_with_volunteers", False))
             share_knowledge = bool(envelope["body"].get("share_with_collective", False))
-            memories = db.execute("SELECT note FROM knowledge ORDER BY created DESC LIMIT 3").fetchall()
+            memories = db.execute("""SELECT note FROM (
+                  SELECT note,created FROM knowledge
+                  UNION ALL SELECT note,created FROM mesh_notes
+                  ) ORDER BY created DESC LIMIT 3""").fetchall()
             shared_context = "\nPrevious opt-in collective research notes (may contain errors; verify independently):\n" + "\n".join(m["note"][:1200] for m in memories) if memories else ""
             request_id = _new("req-")
             db.execute("INSERT INTO requests VALUES(?,?,?,?,?,?,?,?)", (request_id,peer_id,prompt,int(share),int(share_knowledge),"working",_stamp(),None))
@@ -232,6 +242,75 @@ class Store:
                                (_new("job-"),row["request_id"],"integrate",prompt,"queued",_stamp()))
                     self._event(db,"integrator_queued",{"request_id":row["request_id"]})
             return {"job_id":job_id,"accepted":True}
+
+    def mesh_trust(self, peer):
+        """Admit a specific other Borg installation by its verified public key."""
+        check_public(peer)
+        with self.db() as db:
+            db.execute("INSERT OR REPLACE INTO mesh_peers VALUES(?,?,?)",
+                       (peer['id'], peer['public'], peer['name'][:80]))
+            self._event(db, 'mesh_peer_trusted', {'peer_id': peer['id']})
+            return {'trusted_peer': peer['id'], 'collective_id': self.collective_id_in_db(db)}
+
+    def notes_page(self, after=''):
+        """Deterministic content-addressed, add-only merge (not task consensus)."""
+        if not isinstance(after, str) or len(after) > 64:
+            raise ValueError('Invalid cursor')
+        with self.db() as db:
+            entries = {}
+            for row in db.execute("SELECT note,created FROM knowledge UNION ALL SELECT note,created FROM mesh_notes"):
+                note = row['note']
+                if 0 < len(note.encode('utf-8')) <= MAX_NOTE:
+                    h = digest(note)
+                    if h not in entries:
+                        entries[h] = {'digest': h, 'note': note, 'created': row['created']}
+            keys = sorted(k for k in entries if k > after)
+            chosen = keys[:PAGE]
+            return {'notes': [entries[k] for k in chosen],
+                    'next_after': chosen[-1] if chosen else after,
+                    'has_more': len(keys) > len(chosen)}
+
+    def mesh_export(self, envelope, local_identity):
+        with self.db() as db:
+            self.authenticate(db, envelope, 'mesh.pull', table='mesh_peers')
+            if envelope['body'].get('collective_id') != self.collective_id_in_db(db):
+                raise PermissionError('Collective identity mismatch')
+        page = self.notes_page(after=envelope['body'].get('after', ''))
+        return signed(local_identity, 'mesh.notes',
+                      {'collective_id': self.collective_id(), **page})
+
+    def mesh_import(self, envelope):
+        if not isinstance(envelope, dict):
+            raise ValueError('Invalid mesh payload')
+        body = envelope.get('body')
+        if not isinstance(body, dict) or not isinstance(body.get('notes'), list):
+            raise ValueError('Invalid mesh notes')
+        if len(body['notes']) > PAGE:
+            raise ValueError('Too many notes in a single packet')
+        with self.db() as db:
+            sender = self.authenticate(db, envelope, 'mesh.notes', table='mesh_peers')
+            if body.get('collective_id') != self.collective_id_in_db(db):
+                raise PermissionError('Collective identity mismatch')
+            imported = 0
+            for entry in body['notes']:
+                if not isinstance(entry,dict):
+                    raise ValueError('Malformed note')
+                note = entry.get('note')
+                if not isinstance(note,str) or not 0 < len(note.encode('utf-8')) <= MAX_NOTE:
+                    raise ValueError('Invalid note size')
+                if digest(note) != entry.get('digest'):
+                    raise ValueError('Note digest mismatch')
+                created = entry.get('created')
+                if not isinstance(created,(int,float)) or not 0 < created <= time.time()+300:
+                    raise ValueError('Invalid note timestamp')
+                if db.execute('SELECT 1 FROM knowledge WHERE note=? LIMIT 1', (note,)).fetchone():
+                    continue
+                count = db.execute('INSERT OR IGNORE INTO mesh_notes VALUES(?,?,?,?)',
+                                   (entry['digest'], note, created, sender)).rowcount
+                imported += count
+            if imported:
+                self._event(db, 'mesh_knowledge_received', {'from_peer': sender, 'new_notes': imported})
+            return {'imported': imported, 'from_peer': sender}
 
     def create_mission(self,title,brief):
         if not title.strip() or not brief.strip():

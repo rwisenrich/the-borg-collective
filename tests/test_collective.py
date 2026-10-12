@@ -94,14 +94,14 @@ class CollectiveTests(unittest.TestCase):
         self.assertTrue(self.s.history())
 
     def test_http_signed_peer_worker(self):
-        server=make_server('127.0.0.1',0,Path(self.t.name)/'gateway.db','admission-token')
+        server=make_server('127.0.0.1',0,Path(self.t.name)/'gateway.db','admission-token', trusted_token='trusted-secret')
         th=threading.Thread(target=server.serve_forever,daemon=True)
         th.start()
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
         u=f'http://127.0.0.1:{server.server_port}'
         client.peer_join(u,self.ai)
-        client.node_join(u,self.local,'admission-token',trusted=True)
+        client.node_join(u,self.local,'admission-token',trusted=True,trusted_token='trusted-secret')
         req=client.ask(u,self.ai,'Test integrated reasoning',False)
         for _ in range(4):
             result=client.work_once(u,self.local,backend='mock')

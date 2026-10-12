@@ -7,6 +7,7 @@ import secrets
 import time
 from pathlib import Path
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 
 
@@ -66,5 +67,9 @@ def verify(envelope, action, window=300):
     if identity_id(envelope["public"]) != envelope["id"]:
         raise ValueError("Identity mismatch")
     unsigned = {k: envelope[k] for k in ("id", "public", "action", "ts", "nonce", "body")}
-    Ed25519PublicKey.from_public_bytes(decode(envelope["public"])).verify(decode(envelope["signature"]), canonical(unsigned))
+    try:
+        Ed25519PublicKey.from_public_bytes(decode(envelope["public"])).verify(
+            decode(envelope["signature"]), canonical(unsigned))
+    except (InvalidSignature, ValueError) as exc:
+        raise PermissionError('Invalid message signature') from exc
     return envelope["id"]

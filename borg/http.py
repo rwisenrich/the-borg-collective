@@ -2,10 +2,12 @@
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from .store import Store
+from .crypto import load_identity
 
 
-def make_server(host, port, db_path, admission_token):
+def make_server(host, port, db_path, admission_token, trusted_token=None, identity_path=None):
     store = Store(db_path)
+    node_identity = load_identity(identity_path) if identity_path else None
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "BorgCollective/1.0"
@@ -38,7 +40,7 @@ def make_server(host, port, db_path, admission_token):
                 "/v1/nodes/claim":store.claim,
                 "/v1/nodes/complete":store.complete,
             }
-            if self.path not in routes and self.path != "/v1/nodes/register":
+            if self.path not in routes and self.path not in ("/v1/nodes/register","/v1/mesh/pull","/v1/mesh/push"):
                 return self._reply(404,{"error":"Unknown endpoint"})
             try:
                 size = int(self.headers.get("Content-Length","0"))
@@ -49,7 +51,18 @@ def make_server(host, port, db_path, admission_token):
                     raise ValueError("Expected a JSON object")
                 if self.path == "/v1/nodes/register":
                     granted = bool(admission_token) and self.headers.get("X-Admission-Token") == admission_token
+                    wants_trust = bool(envelope.get('body',{}).get('trusted',False))
+                    if wants_trust and (not trusted_token or self.headers.get('X-Trusted-Token') != trusted_token):
+                        raise PermissionError('Trusted worker needs separate trusted-worker admission')
                     out = store.register_node(envelope, admitted=granted)
+                elif self.path == '/v1/mesh/pull':
+                    if not node_identity:
+                        raise PermissionError('Mesh disabled on this server')
+                    out = store.mesh_export(envelope,node_identity)
+                elif self.path == '/v1/mesh/push':
+                    if not node_identity:
+                        raise PermissionError('Mesh disabled on this server')
+                    out = store.mesh_import(envelope)
                 else:
                     out = routes[self.path](envelope)
                 self._reply(200,out)

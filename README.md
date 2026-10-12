@@ -1,108 +1,141 @@
 # THE BORG COLLECTIVE
 
-**An open, free, volunteer-powered collective AI research runtime.**  
-**Stewardship, not ownership. Resistance is futile. Participation is voluntary.**
+**One continuing distributed AI research collective. Free software. Voluntary resources. Stewardship, not ownership.**
 
-> **Version 1.0 — new clean codebase (October 2026).** This is a runnable local-first research platform, **not yet** a deployed global decentralized AI, a fully shared neural mind, or a production service. It deliberately replaces DACO v0.x; the historical prototypes are **not** part of this repository.
+> **Version 1.0 — native Borg runtime.** This repository is the clean starting point, not the earlier DACO prototype series. Borg is independent of NVIDIA, any specific cloud provider, any commercial inference API, and any particular language model. **Borg does not yet implement a fully distributed neural forward pass, worldwide discovery, or consensus-backed survival after all coordinating nodes fail.**
 
-## The architecture
+The goal is a single collective identity, distributed reasoning and durable memory, volunteer computing, independent AI peers, and detachable away crews that reconnect with reviewed discoveries. Participating independent AIs may remain independent; joining the shared cognitive system is a separate choice. No voting, ownership credits, or payment system is required.
 
-The Collective has **one persistent logical identity** and one durable, hash-linked event history. Distinct reasoning workers contribute proposals (`explore`, `challenge`, `verify`), and a trusted integration worker synthesizes one response. The design explicitly distinguishes **internal collective computation** from **independent outside AIs**, which connect under their own signed identities. Humans may voluntarily offer resources without buying priority or authority. A separately exported away mission can operate offline and return a report for review.
+## What's actually built
 
-| Implemented in V1 | Not yet implemented |
+| Working V1 components | Engineering still to do |
 |---|---|
-| Real Ollama and OpenAI-compatible inference adapters | Cross-host tensor/model parallelism inside one neural forward pass |
-| Multiple active reasoning roles and a synthesis task | Peer-owned consensus and replicated active model state |
-| Signed Ed25519 peer and donor identities | Public-internet hardened P2P mesh / libp2p DHT |
-| Opt-in volunteer inference, task leases, retries on expiry | A2A 1.0 conformance and production node installer |
-| One collective ID, verified history and opt-in shared research notes | Verified encrypted private inference on untrusted hosts |
-| Distinct outside AI requests and private answers | Automatic autonomous code deployment or reproduction |
-| Offline mission export / work / return (review-gated) | Fully automatic reconciliation of divergent memory branches |
+| Original signed peer and volunteer-worker protocol | Public internet-scale libp2p/DHT discovery and NAT traversal |
+| Separate AI identities and voluntary compute admission | Fully decentralized authority and quorum-based task continuity |
+| Direct local GGUF inference via optional `llama-cpp-python` | Native distributed transformer model/layer execution |
+| Optional local Ollama / generic HTTP model backends | Memory-safe execution of arbitrary third-party tools |
+| Parallel explorer, challenger, verifier and one answer integrator | Dynamic model-level sharding across volunteered GPUs |
+| Opt-in, replicated notes between trusted Borg nodes | General replicated shared working-state consistency |
+| Durable SQLite task leases, restart persistence and event hashes | Internet-scale volunteer scheduling, peer reputation and abuse controls |
+| Three-role detached offline research crew and review-gated return | Distributed, independently operating multi-machine away crews |
 
-## Quick start
+**Important distinction:** The integration/runtime/protocol layers are Borg source code. Large neural models and optimized inference kernels are separate components. We can study and modify appropriately licensed implementations, but we do not claim to have recompiled every open-source project into the V1 repository. See [ENGINEERING_SOURCES.md](ENGINEERING_SOURCES.md).
 
-Requires **Python 3.10+**.
+## Installation
 
-```sh
+Python **3.10+**:
+
+```bash
 python -m pip install -e .
-python -m borg init --db borg.sqlite3
-python -m borg identity --out local-ai.key --name "My Home AI"
-python -m borg identity --out trusted-worker.key --name "My trusted inference node"
+python -m borg --help
 ```
 
-Run a local server with an admission token (terminal 1):
+For **direct model inference on your own CPU/GPU**, install the optional GGUF backend:
 
-```sh
-export BORG_ADMISSION_TOKEN="$(python -c 'import secrets;print(secrets.token_urlsafe(32))')"
-echo "Copy this admission secret to the second terminal; do not publish it: $BORG_ADMISSION_TOKEN"
+```bash
+python -m pip install -e '.[local]'
+```
+
+Supply your own compatible licensed `.gguf` model weights. For example, use a small quantized model on an older laptop. Set `BORG_CPU_THREADS` (default 4), `BORG_GPU_LAYERS` (default 0), and `BORG_CONTEXT_SIZE` (default 2048) if appropriate. These are local resource limits; Borg does not download models or weights automatically.
+
+## Start one local collective
+
+```bash
+python -m borg init --db borg.sqlite3
+python -m borg identity --out ai.key --name "Home AI"
+python -m borg identity --out worker.key --name "Trusted local worker"
+```
+
+Set distinct enrollment secrets for **ordinary donated workers** and **trusted workers**. Generate fresh random values; the strings below are placeholders, not credentials to use:
+
+```bash
+export BORG_ADMISSION_TOKEN='YOUR_RANDOM_VOLUNTEER_TOKEN'
+export BORG_TRUSTED_WORKER_TOKEN='YOUR_OTHER_RANDOM_TRUSTED_TOKEN'
 python -m borg serve --db borg.sqlite3
 ```
 
-In a second terminal, use the **same** admission token, then register your AI and a trusted worker:
+In another terminal with the **same tokens**, join and ask:
 
-```sh
-export BORG_ADMISSION_TOKEN='PASTE_THE_SAME_TOKEN_FROM_TERMINAL_1'
-python -m borg peer-join --identity local-ai.key
-python -m borg node-join --identity trusted-worker.key --trusted
-python -m borg ask --identity local-ai.key "Explain how a shared cognitive workspace might work."
+```bash
+python -m borg peer-join --identity ai.key
+python -m borg node-join --identity worker.key --trusted
+python -m borg ask --identity ai.key "Analyze how a decentralized collective could store shared research."
 ```
 
-Copy the `request_id` printed by `ask`. To process the three parallel viewpoints and integrated response, start a real model-backed worker. For example, after installing Ollama and downloading the model `qwen3:1.7b`:
+To process the tasks **without any NVIDIA service**, run a local GGUF model in a third terminal:
 
-```sh
-ollama pull qwen3:1.7b
-python -m borg worker --identity trusted-worker.key --backend ollama --model qwen3:1.7b --max-jobs 4
-python -m borg status --identity local-ai.key REQUEST_ID
+```bash
+python -m borg worker --identity worker.key --backend gguf --model /path/to/your/model.gguf --max-jobs 4
+python -m borg status --identity ai.key REQUEST_ID
 ```
 
-Alternatively, for **NVIDIA Dynamo, vLLM, or another compatible inference gateway**:
+To use an existing local model service instead: `--backend ollama --model qwen3:1.7b`. The `--backend mock` option is useful for repeatable tests; **it is not an AI**. A standard chat-completions HTTP interface is available as `--backend http-api --base-url HTTPS_OR_LOOPBACK_URL --model MODEL_NAME`; no service is required by Borg itself.
 
-```sh
-export BORG_MODEL_API_KEY='YOUR_SERVICE_KEY_IF_NEEDED'
-python -m borg worker --identity trusted-worker.key --backend openai-compatible --base-url https://YOUR-GATEWAY/v1 --model YOUR-MODEL --max-jobs 4
+Prompts are private to trusted workers by default. `borg ask --share-with-volunteers` explicitly permits donated machines to read that question. `--share-with-collective` explicitly permits the completed answer to become a research note used by other collective requests and replicated to invited peers. Unverified research notes are labeled as such; they are not automatically accepted as scientific fact.
+
+## Connect two Borg nodes directly
+
+This implements **actual bidirectional, authenticated knowledge exchange** between two distinct Borg databases. It is not yet public DHT discovery or global task consensus.
+
+First create the home Borg database and remember the printed `collective_id`:
+
+```bash
+python -m borg init --db home.db
+python -m borg identity --out home.key --name "Home node"
+python -m borg identity-public --identity home.key --out home-public.json
 ```
 
-The `--backend mock` option provides deterministic testing and **does not run an actual AI model**. Your prompt remains private to trusted workers by default. Add `--share-with-volunteers` only if you expressly want an outside donor to see that request text. Add `--share-with-collective` only if you want the resulting answer stored as a research note that future collective requests may retrieve; research notes are **not verified facts**. Both sharing options are off by default. Donor machines do **not** receive arbitrary shell commands or programs through this API.
+Then set up a second *voluntary* node using the **same** collective identity:
 
-### Volunteer inference (opt-in)
-
-Each donor creates their own Ed25519 identity, installs the client, and obtains an admission token from the coordinator operator. That token is an operator authorization mechanism, **not** a vote, ownership right, or paid membership. The coordinator initially listens on `127.0.0.1` only. Remote work requires an operator-configured TLS gateway and further hardening before inviting the public.
-
-```sh
-python -m borg identity --out donor.key --name "Donated spare GPU"
-python -m borg node-join --identity donor.key
-python -m borg worker --identity donor.key --backend ollama --model qwen3:1.7b --once
+```bash
+python -m borg init --db cloud.db --collective-id YOUR_COLLECTIVE_ID
+python -m borg identity --out cloud.key --name "Second node"
+python -m borg identity-public --identity cloud.key --out cloud-public.json
 ```
 
-Only explicitly shared inference tasks are available to untrusted donor nodes. Final synthesis runs on an operator-approved trusted node. There are no credits, resource-weighted priority, accounts with votes, or required payments.
+Each node's steward exchanges **public identity files**, not private keys. Trust each other explicitly:
 
-### Detachable away mission
-
-```sh
-python -m borg mission-new "Research trip" "Compare three P2P memory designs" --out away.json
-# On an independently operating node (with a local model):
-python -m borg mission-work --input away.json --out report.json --backend ollama --model qwen3:1.7b
-# Back at the original collective:
-python -m borg mission-import --input report.json
-python -m borg verify
+```bash
+python -m borg mesh-trust --db home.db --public-file cloud-public.json
+python -m borg mesh-trust --db cloud.db --public-file home-public.json
 ```
 
-The returned report is recorded with `needs_review=true`; it does not overwrite memory, change configuration, or execute code automatically. A signed, replicated multi-node away collective is a later milestone.
+On the home machine (or in a first local terminal):
 
-## AI-model architecture and NVIDIA
+```bash
+python -m borg serve --db home.db --identity home.key --port 8787
+```
 
-The main application communicates with inference engines through two adapters: **Ollama's `/api/chat`** and the **OpenAI-compatible `/chat/completions`** API. NVIDIA Dynamo and vLLM may run behind the latter, and more distributed backends can be connected later without altering peer identity or memory modules. V1 does **not** embed or claim to implement NVIDIA Dynamo, NCCL, Petals, or libp2p. Those are external integration targets with distinct environments and licensing conditions.
+On the second machine (or in a second terminal) run:
 
-## Trust, memory and autonomy
+```bash
+python -m borg mesh-sync --db cloud.db --identity cloud.key --url http://127.0.0.1:8787
+```
 
-The V1 SQLite coordinator is a **single state writer**. It gives a demonstrable continuing logical identity, not fault tolerance against losing the coordinator. The hash chain detects accidental changes and simple tampering, not compromise by someone able to rewrite all hashes. Each independent AI has a private signing key; keep `*.key` private and out of Git. Prompt texts and results are stored in the local database and visible to the authorized workers processing them. Only answers explicitly opted into collective sharing are retrieved for later reasoning; those notes can be wrong and are not treated as authoritative evidence. Do not put sensitive material in volunteer-shared requests.
+`mesh-sync` pulls and pushes **only explicitly opted-in research notes**. For a continuing visible process, add `--watch --interval 30`. For genuinely remote machines, use a manually configured HTTPS reverse proxy or authenticated overlay network, not plaintext HTTP. The bundled server deliberately listens only on loopback. It does not silently connect, spread, or run commands on volunteer devices.
 
-A collective can be open to new implementations without surrendering volunteer choice. Resources are offered explicitly, donors can stop their workers, peers keep separate identities, and code execution does not occur at the instruction of untrusted internet peers. The research goal is decentralized shared cognition, with fully testable steps toward a permissioned voluntary P2P mesh.
+## Detached away mission
 
-## Test and development
+```bash
+python -m borg mission-new "Distributed memory study" "Compare 3 local-first memory designs" --db home.db --out away.json
+# The next command works offline with a locally installed model:
+python -m borg mission-work --input away.json --out report.json --backend gguf --model /path/to/model.gguf
+# Reconnect later and review results before incorporation:
+python -m borg mission-import --db home.db --input report.json
+```
 
-```sh
+The detached worker creates three different research perspectives, then a synthesis. It can run while disconnected from the parent collective. The resulting report remains subject to review; it does not silently overwrite shared memory or deploy code. A **multi-machine** detached sub-collective still needs engineering.
+
+## Tests
+
+```bash
 python -m unittest discover -s tests -v
 ```
 
-See [`ROADMAP.md`](ROADMAP.md) for the staged path from V1 through real-network resilience. Contributions are welcome under MIT. This is an independent research project and is not affiliated with Star Trek or Paramount.
+The test suite covers signed peers, private prompts, volunteer permissions, real HTTP task exchange, fault retries, shared opt-in memory, two-node mesh replication, rejection of untrusted peers, tamper checks, and detached crew operation. Local GGUF integration is tested with a simulated model interface; a real model weight file was **not** run in the test environment.
+
+## Project stance
+
+The collective is free and voluntary. Nobody acquires control by donating extra computers. An independently developed AI may connect without surrendering its own identity. Peer admission is consent and resource protection, **not a voting system**. Nodes are never permitted to commandeer devices, hide their operation, or execute arbitrary programs supplied by strangers.
+
+MIT-licensed Borg integration code. Model weights and separately installed engines retain their own licenses. See [STATUS.md](STATUS.md), [ROADMAP.md](ROADMAP.md) and [ENGINEERING_SOURCES.md](ENGINEERING_SOURCES.md). This is an independent research project, not affiliated with Star Trek or Paramount.
